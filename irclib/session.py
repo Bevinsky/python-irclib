@@ -169,8 +169,8 @@ class Session:
         If calling it manually seems boring, look at the
         :meth:`process_forever` method.
         """
-        sockets = map(lambda x: x._get_socket(), self.connections)
-        sockets = filter(lambda x: x != None, sockets)
+        sockets = [conn._get_socket() for conn in self.connections
+                   if conn._get_socket() is not None]
         if sockets:
             (i, o, e) = select.select(sockets, [], [], timeout)
             # Process incoming data
