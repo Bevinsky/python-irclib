@@ -60,13 +60,13 @@ class Session:
 
     def __init__(self, encoding='utf-8', handle_ctcp=True):
         """Constructor for :class:`Session` objects.
-        
+
         :param encoding: The encoding that we should treat the incoming data as.
         :param handle_ctcp: If this is True, the Session will respond to
                             common CTCP commands like VERSION and PING
                             on its own. It will still generate high level
                             events.
-        
+
         See :meth:`process_once` for information on how to run the Session
         object.
         """
@@ -76,13 +76,13 @@ class Session:
         self.delayed_commands = [] # list of tuples in the format (time, function, arguments)
         self.encoding = encoding
         self.handle_ctcp = handle_ctcp
-        
+
         # CTCP response values
         #: Used to respond to CTCP VERSION messages.
         self.ctcp_version = "Hanyuu IRC Lib 1.3"
         #: Used to respond to CTCP SOURCE messages.
         self.ctcp_source = "https://github.com/R-a-dio/Hanyuu-sama/"
-        
+
     def server(self):
         """Creates and returns a :class:`connection.ServerConnection` object."""
 
@@ -103,7 +103,7 @@ class Session:
     def process_timeout(self):
         """This is called to process any delayed commands that are registered
         to the Session object.
-        
+
         .. seealso:: :meth:`process_once`
         """
         t = time.time()
@@ -118,11 +118,11 @@ class Session:
         """This method will send data to the servers from the message queue
         at a limited rate. The default is 2500 bytes per 1.3 seconds. This
         value cannot currently be changed.
-        
+
         .. warning::
             This method is internal and should not be called manually.
         """
-        
+
         for c in self.connections:
             try:
                 delta = time.time() - c.last_time
@@ -133,7 +133,7 @@ class Session:
             if c.send_time >= 1.3:
                 c.send_time = 0
                 c.sent_bytes = 0
-            
+
             while not c.message_queue.empty():
                 if c.sent_bytes <= 2500:
                     message = c.message_queue.get()
@@ -152,20 +152,20 @@ class Session:
 
     def process_once(self, timeout=0):
         """Process data from connections once.
-        
+
         :param timeout: How long the select() call should wait if no
                         data is available.
 
         This method should be called periodically to check and process
         incoming and outgoing data, if there is any.
-        
+
         It calls :meth:`process_data`, :meth:`_send_once` and
         :meth:`process_timeout`.
-        
+
         It will also examine when we last received data from the server; if it
         exceeds a specified time limit, the Session assumes that we have lost
         connection to the server and will attempt to reconnect us.
-        
+
         If calling it manually seems boring, look at the
         :meth:`process_forever` method.
         """
@@ -190,12 +190,12 @@ class Session:
         self._send_once()
         # Check delayed calls
         self.process_timeout()
-        
+
     def process_forever(self, timeout=0.2):
         """Run an infinite loop, processing data from connections.
 
         This method repeatedly calls :meth:`process_once`.
-            
+
         :param timeout: Parameter to pass to process_once.
         """
         while 1:
@@ -203,7 +203,7 @@ class Session:
 
     def disconnect_all(self, message=""):
         """Disconnects all connections.
-            
+
         :param message: The quit message to send to servers.
         """
         for c in self.connections:
@@ -239,7 +239,7 @@ class Session:
         c = dcc.DCCConnection(self, dcctype, dccinfo)
         self.connections.append(c)
         return c
-    
+
     def register_socket(self, socket, conn):
         """Internal method used to map the sockets on
         :class:`connection.Connection` to the connections themselves."""
@@ -247,22 +247,22 @@ class Session:
 
     def _handle_event(self, server, event):
         """Internal event handler.
-        
+
         Receives events from :class:`connection.Connection` and converts
         them into high level events, then dispatches them to event handlers.
         """
-        
+
         # PONG any incoming PING event
         if event.eventtype == 'ping':
             self._ping_ponger(server, event)
-        
+
         # Should we handle the common CTCP events?
         if self.handle_ctcp and event.eventtype == 'ctcp':
             try:
                 self._ctcp_handler(server, event)
             except:
                 logger.exception('Error in CTCP handler')
-        
+
         # Preparse MODE events, we want them separate in high level
         if event.eventtype in ['mode', 'umode']:
             modes = server._parse_modes(' '.join(event.argument))
@@ -281,17 +281,17 @@ class Session:
                     self._handle_event(server, new_event)
                 # If we had to preparse, end here
                 return
-        
+
         # Rebuild the low level event into a high level one
         high_event = HighEvent.from_low_event(server, event)
-        
+
         handlers = Session.handlers
-        
+
         command = high_event.command
         channel = high_event.channel
         nickname = high_event.nickname
         message = high_event.message
-        
+
         if channel:
             channel = channel.lower()
         if nickname:
@@ -315,7 +315,7 @@ class Session:
             if message and regex:
                 if not regex.match(message):
                     continue
-            
+
             # If we get here, that means we met all the requirements for
             # triggering this handler
             try:
@@ -326,29 +326,29 @@ class Session:
     def _remove_connection(self, connection):
         """Removes a connection from the connection list."""
         self.connections.remove(connection)
-    
+
     def _ping_ponger(self, connection, event):
         """Internal responder to PING events."""
         connection._last_ping = time.time()
         connection.pong(event.target)
-    
+
     def _ctcp_handler(self, server, event):
         """Internal handler of CTCP events.
-        
+
         Responds to VERSION, PING, TIME and SOURCE.
-        
+
         The attributes :attr:`self.ctcp_version` and :attr:`ctcp_source` can
-        be used to customize the responses of their respective CTCPs. 
+        be used to customize the responses of their respective CTCPs.
         """
         ctcp = event.argument[0]
         parameters = event.argument[1:]
-        
+
         source = event.source
         if '!' in source:
-            # Source is a userhost, we need to split it 
+            # Source is a userhost, we need to split it
             source = utils.nm_to_n(source)
-        
-        
+
+
         if ctcp == 'VERSION':
             server.ctcp_reply(source, 'VERSION ' + self.ctcp_version)
         elif ctcp == 'PING':
@@ -371,25 +371,25 @@ class HighEvent(object):
     """
     def __init__(self, server, command, nickname, channel, message):
         super(HighEvent, self).__init__()
-        
+
         self.command = command
         self.nickname = nickname
         self.server = server
         self.channel = channel
         self.message = message
-        
+
     @classmethod
     def from_low_event(cls, server, low_event):
         """Generates a high level event from a low level one."""
         command = low_event.eventtype
-        
+
         # We supply the source and server already to reduce code repetition.
         # Just use it as the HighEvent constructor but with partial applied.
         creator = lambda *args, **kwargs: cls(server,
                                               command,
                                               *args,
                                               **kwargs)
-        
+
         if command == 'welcome':
             # We treat this as a "connected" event
             # The name of the server we are connected to
@@ -398,7 +398,7 @@ class HighEvent(object):
             nickname = Nickname(low_event.target, nickname_only=True)
             # The welcome message
             message = low_event.argument[0]
-            
+
             event = creator(nickname, None, message)
             event.command = 'connect'
             event.server_name = server_name
@@ -406,12 +406,12 @@ class HighEvent(object):
         elif command == 'nick':
             # A nickname change.
             old_nickname = Nickname(low_event.source)
-            
+
             # We cheat here by using the original host and replacing the
             # name attribute with our new nickname.
             new_nickname = Nickname(low_event.source)
             new_nickname.name = low_event.target
-            
+
             event = creator(old_nickname, None, None)
             event.new_nickname = new_nickname
             return event
@@ -442,7 +442,7 @@ class HighEvent(object):
             ctcp = low_event.argument[0]
             # The things behind the command are then indexed behind it.
             message = ' '.join(low_event.argument[1:])
-            
+
             event = creator(nickname, None, message)
             event.ctcp = ctcp
             return event
@@ -456,7 +456,7 @@ class HighEvent(object):
                 channel = None
             # Message is in the argument
             message = low_event.argument[0]
-            
+
             event = creator(nickname, channel, message)
             return event
         elif command == 'ctcpreply':
@@ -468,7 +468,7 @@ class HighEvent(object):
             ctcp = low_event.argument[0]
             # The things behind the command are then indexed behind it.
             message = ' '.join(low_event.argument[1:])
-            
+
             event = creator(nickname, None, message)
             event.ctcp = ctcp
             return event
@@ -476,19 +476,19 @@ class HighEvent(object):
             # A quit from an user.
             nickname = Nickname(low_event.source)
             message = low_event.argument[0]
-            
+
             return creator(nickname, None, message)
         elif command == 'join':
             # Someone joining our channel
             nickname = Nickname(low_event.source)
             channel = low_event.target
-            
+
             return creator(nickname, channel, None)
         elif command == 'part':
             # Someone leaving our channel
             nickname = Nickname(low_event.source)
             channel = low_event.target
-            
+
             return creator(nickname, channel, None)
         elif command == 'kick':
             # Someone forcibly leaving our channel.
@@ -500,7 +500,7 @@ class HighEvent(object):
             reason = low_event.argument[1]
             # The channel this all went wrong in!
             channel = low_event.target
-            
+
             event = creator(target, channel, reason)
             event.kicker = kicker
             return event
@@ -518,7 +518,7 @@ class HighEvent(object):
             mode_setter = Nickname(low_event.source)
             # Simple channel
             channel = low_event.target
-            
+
             # ServerConnection._parse_modes returns a list of tuples with
             # (operation, mode, param)
             # HOWEVER, we preparse the modes, so we (preferably) only want the
@@ -541,7 +541,7 @@ class HighEvent(object):
             # If this isn't a topic command, there is no setter
             topic_setter = None
             if command == 'topic':
-                setter = Nickname(low_event.source)            
+                setter = Nickname(low_event.source)
             # The argument contains the topic string
             # Treat notopic as empty string
             topic = ''
@@ -558,7 +558,7 @@ class HighEvent(object):
             event = creator(None, None, low_event.argument[0])
             event.command = 'raw'
             return event
-        
+
         # The event was not high level: thus, it's not raw, but simply unparsed
         # You will probably be able to register to these, but they won't have
         # much use
@@ -566,25 +566,25 @@ class HighEvent(object):
         event.source = low_event.source
         event.target = low_event.target
         return event
-    
-    
+
+
 class Nickname(object):
     """
     A simple class that represents a nickname on IRC.
-    
+
     Contains information such as actual nickname, hostmask and more.
     """
     def __init__(self, host, nickname_only=False):
         """
         The constructor really just expects the raw host send by IRC servers.
-        
+
         It parses this for you into segments.
-        
+
         if `nickname_only` is set to True it expects a bare nickname unicode
         object to be used as nickname and nothing more.
         """
         super(Nickname, self).__init__()
-        
+
         if nickname_only:
             self.name = host
         else:
@@ -596,31 +596,31 @@ def event_handler(events, channels=[], nicks=[], modes='', regex=''):
     The decorator for high level event handlers. By decorating a function
     with this, the function is registered in the global :class:`Session` event
     handler list, :attr:`Session.handlers`.
-    
+
     :param events: The events that the handler should subscribe to.
                    This can be both a string and a list; if a string
                    is provided, it will be added as a single element
                    in a list of events.
                    This rule applies to `channels` and `nicks` as well.
-    
+
     :param channels: The channels that the events should trigger on.
                      Given an empty list, all channels will trigger
                      the event.
-    
+
     :param nicks: The nicknames that this handler should trigger for.
                   Given an empty list, all nicknames will trigger
                   the event.
-    
+
     :param modes: The required channel modes that are needed to trigger
                   this event.
                   If an empty mode string is specified, no modes are needed
                   to trigger the event.
-    
+
     :param regex: The event will only be triggered if the
                   :attr:`HighEvent.message` matches the specified regex.
                   If no regex is specified, any :attr:`HighEvent.message`
                   will do.
-    
+
     """
     Handler = collections.namedtuple('Handler', ['handler',
                                                  'events',
@@ -628,7 +628,7 @@ def event_handler(events, channels=[], nicks=[], modes='', regex=''):
                                                  'nicks',
                                                  'modes',
                                                  'regex'])
-    
+
     # If you think the type checking here is wrong, please fix it,
     # i have no idea what i'm doing
     if not isinstance(events, list):
@@ -641,7 +641,7 @@ def event_handler(events, channels=[], nicks=[], modes='', regex=''):
         raise TypeError('invalid type for mode string: {}'.format(modes))
     if not isinstance(regex, str) and not isinstance(regex, unicode):
         raise TypeError('invalid type for regex: {}'.format(regex))
-    
+
     for event in events:
         if not isinstance(event, str) and not isinstance(event, unicode):
             raise TypeError('invalid type for event name: {}'.format(event))
@@ -651,20 +651,77 @@ def event_handler(events, channels=[], nicks=[], modes='', regex=''):
     for nick in nicks:
         if not isinstance(nick, str) and not isinstance(nick, unicode):
             raise TypeError('invalid type for nickname: {}'.format(nick))
-    
+
     # we don't care about cases, just lower
     events = map(lambda e: e.lower(), events)
     channels = map(lambda c: c.lower(), channels)
     nicks= map(lambda n: n.lower(), nicks)
-    
+
     # Compile the regex in advance
     if regex != '':
         cregex = re.compile(regex, re.I)
     else:
         cregex = None
-    
+
     def decorator(fn):
         handler = Handler(fn, events, channels, nicks, modes, cregex)
         Session.handlers[fn.__module__ + ":" + fn.__name__] = handler
         return fn
     return decorator
+
+
+def boolean_filter(func):
+    filter_func = [None]
+
+    def callback_getter(callback):
+        def callback_wrapper(*args, **kwargs):
+            if filter_func[0](*args, **kwargs):
+                callback(*args, **kwargs)
+        return callback_wrapper
+
+    def filter_wrapper(*args, **kwargs):
+        filter_func[0] = func(*args, **kwargs)
+
+        return callback_getter
+
+    return filter_wrapper
+
+
+class Filters(object):
+    @boolean_filter
+    def channels(*channels):
+        def filter(high_event):
+            return high_event.channel in channels
+        return filter
+
+    @boolean_filter
+    def nicks(*nicks):
+        nicks = map(lambda x:nicks.lower(), nicks)
+        def filter(high_event):
+            return high_event.nickname\
+                and high_event.nickname.name.lower() in nicks
+        return filter
+
+    @boolean_filter
+    def events(*events):
+        def filter(high_event):
+            return high_event.command in events
+        return filter
+
+    @boolean_filter
+    def match(regex):
+        cregex = re.compile(regex, re.I)
+        def filter(high_event):
+            return high_event.message and cregex.search(high_event.message)
+        return filter
+
+    @boolean_filter
+    def attributematch(attribute, *values):
+        def filter(high_event):
+            return (getattr(high_event, attribute) or None) in values
+        return filter
+
+    #TODO: insert more specific handlers for event-specific attributes
+
+
+

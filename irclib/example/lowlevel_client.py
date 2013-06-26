@@ -1,4 +1,5 @@
 from irclib import connection
+from irclib import session
 
 
 class SimpleIRCClient:
@@ -23,7 +24,7 @@ class SimpleIRCClient:
         dcc_connections -- A list of DCCConnection instances.
     """
     def __init__(self):
-        self.ircobj = connection.IRC()
+        self.ircobj = session.Session()
         self.connection = self.ircobj.server()
         self.dcc_connections = []
         self.ircobj.add_global_handler("all_events", self._dispatcher, -10)
