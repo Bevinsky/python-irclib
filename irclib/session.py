@@ -10,7 +10,9 @@ from . import connection
 from . import dcc
 
 from . import logger
+import logging
 logger = logger.getChild('session')
+logger.setLevel(logging.DEBUG)
 
 import time
 import select
@@ -542,7 +544,7 @@ class HighEvent(object):
         # The event was not high level: thus, it's not raw, but simply unparsed
         # You will probably be able to register to these, but they won't have
         # much use
-        event = creator(None, None, low_event.argument[0])
+        event = creator(None, None, low_event.argument)
         event.source = low_event.source
         event.target = low_event.target
         return event
@@ -596,13 +598,13 @@ def boolean_filter(func):
 
 class Filters(object):
     @boolean_filter
-    def channels(*channels):
+    def channels(self, channels):
         def filter(high_event):
             return high_event.channel in channels
         return filter
 
     @boolean_filter
-    def nicks(*nicks):
+    def nicks(self, *nicks):
         nicks = map(lambda x:nicks.lower(), nicks)
         def filter(high_event):
             return high_event.nickname\
@@ -610,25 +612,25 @@ class Filters(object):
         return filter
 
     @boolean_filter
-    def events(*events):
+    def events(self, *events):
         def filter(high_event):
             return high_event.command in events
         return filter
 
     @boolean_filter
-    def match(regex):
+    def match(self, regex):
         cregex = re.compile(regex, re.I)
         def filter(high_event):
             return high_event.message and cregex.search(high_event.message)
         return filter
 
     @boolean_filter
-    def attributematch(attribute, *values):
+    def attributematch(self, attribute, *values):
         def filter(high_event):
             return (getattr(high_event, attribute) or None) in values
         return filter
 
     #TODO: insert more specific handlers for event-specific attributes
 
-
+filters = Filters()
 
