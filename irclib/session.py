@@ -297,27 +297,7 @@ class Session:
         if nickname:
             nickname = nickname.name.lower()
 
-        for function, events, channels, nicks, modes, regex in handlers.values():
-            # command is guaranteed to exist, no need to do .lower in advance
-            if events and command.lower() not in events:
-                continue
-            if channels and channel not in channels:
-                continue
-            if nicks and nickname not in nicks:
-                continue
-            if channel and nickname and modes != '':
-                # If the triggering nick does not have any of the needed modes
-                if not server.hasanymodes(channel,
-                                          nickname,
-                                          modes):
-                    # Don't trigger the handler
-                    continue
-            if message and regex:
-                if not regex.match(message):
-                    continue
-
-            # If we get here, that means we met all the requirements for
-            # triggering this handler
+        for function in handlers.values():
             try:
                 function(high_event)
             except:
@@ -591,83 +571,10 @@ class Nickname(object):
             self.name = utils.nm_to_n(host)
             self.host = host
 
-def event_handler(events, channels=[], nicks=[], modes='', regex=''):
-    """
-    The decorator for high level event handlers. By decorating a function
-    with this, the function is registered in the global :class:`Session` event
-    handler list, :attr:`Session.handlers`.
 
-    :param events: The events that the handler should subscribe to.
-                   This can be both a string and a list; if a string
-                   is provided, it will be added as a single element
-                   in a list of events.
-                   This rule applies to `channels` and `nicks` as well.
-
-    :param channels: The channels that the events should trigger on.
-                     Given an empty list, all channels will trigger
-                     the event.
-
-    :param nicks: The nicknames that this handler should trigger for.
-                  Given an empty list, all nicknames will trigger
-                  the event.
-
-    :param modes: The required channel modes that are needed to trigger
-                  this event.
-                  If an empty mode string is specified, no modes are needed
-                  to trigger the event.
-
-    :param regex: The event will only be triggered if the
-                  :attr:`HighEvent.message` matches the specified regex.
-                  If no regex is specified, any :attr:`HighEvent.message`
-                  will do.
-
-    """
-    Handler = collections.namedtuple('Handler', ['handler',
-                                                 'events',
-                                                 'channels',
-                                                 'nicks',
-                                                 'modes',
-                                                 'regex'])
-
-    # If you think the type checking here is wrong, please fix it,
-    # i have no idea what i'm doing
-    if not isinstance(events, list):
-        events = [events]
-    if not isinstance(channels, list):
-        channels = [channels]
-    if not isinstance(nicks, list):
-        nicks = [nicks]
-    if not isinstance(modes, str) and not isinstance(modes, unicode):
-        raise TypeError('invalid type for mode string: {}'.format(modes))
-    if not isinstance(regex, str) and not isinstance(regex, unicode):
-        raise TypeError('invalid type for regex: {}'.format(regex))
-
-    for event in events:
-        if not isinstance(event, str) and not isinstance(event, unicode):
-            raise TypeError('invalid type for event name: {}'.format(event))
-    for channel in channels:
-        if not isinstance(channel, str) and not isinstance(channel, unicode):
-            raise TypeError('invalid type for channel name: {}'.format(channel))
-    for nick in nicks:
-        if not isinstance(nick, str) and not isinstance(nick, unicode):
-            raise TypeError('invalid type for nickname: {}'.format(nick))
-
-    # we don't care about cases, just lower
-    events = map(lambda e: e.lower(), events)
-    channels = map(lambda c: c.lower(), channels)
-    nicks= map(lambda n: n.lower(), nicks)
-
-    # Compile the regex in advance
-    if regex != '':
-        cregex = re.compile(regex, re.I)
-    else:
-        cregex = None
-
-    def decorator(fn):
-        handler = Handler(fn, events, channels, nicks, modes, cregex)
-        Session.handlers[fn.__module__ + ":" + fn.__name__] = handler
-        return fn
-    return decorator
+def register(func):
+    Session.handlers[func.__module__ + ":" + func.__name__] = func
+    return func
 
 
 def boolean_filter(func):
