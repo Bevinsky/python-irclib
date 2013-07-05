@@ -21,7 +21,7 @@ class DCCConnection(connection.Connection):
 
     DCCConnection objects are instantiated by calling
     :meth:`session.Session.dcc`.
-    
+
     For usage, see :meth:`connect` and :meth:`listen`.
     """
     def __init__(self, irclibobj, dcctype, dccinfo=(None, 0)):
@@ -36,14 +36,14 @@ class DCCConnection(connection.Connection):
 
     def connect(self, address, port):
         """Connect/reconnect to a DCC peer.
-    
+
         :param address: Host/IP address of the peer.
         :param port: The port number to connect to.
 
         Returns the DCCConnection object.
         """
         if (self.dcctype == "send"):
-            self.fileobj = open(self.dccfile, "wb")
+            self.fileobj = self.dccfile # always assume fileobj
             self.current = 0
         self.peeraddress = socket.gethostbyname(address)
         self.peerport = port
@@ -85,12 +85,12 @@ class DCCConnection(connection.Connection):
 
     def disconnect(self, message=""):
         """Hang up the connection and close the object.
-        
+
         :param message: Quit message.
-        
+
         .. note::
             After calling this method, the object becomes unusable.
-        
+
         """
         if not self.connected:
             return

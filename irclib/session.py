@@ -544,7 +544,8 @@ class HighEvent(object):
         # The event was not high level: thus, it's not raw, but simply unparsed
         # You will probably be able to register to these, but they won't have
         # much use
-        event = creator(None, None, low_event.argument)
+        event = creator(None, None, low_event.argument[0] if
+                        len(low_event.argument) > 0 else u'')
         event.source = low_event.source
         event.target = low_event.target
         return event
