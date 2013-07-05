@@ -159,6 +159,12 @@ class DCCConnection(connection.Connection):
         else:
             chunks = [new_data]
 
+        if self.dcctype == 'send' and self.current == self.total:
+            # We have everything
+            self._irclibobj._handle_event(
+                self,
+                connection.Event('dcc_complete', self.peeraddress, None, None))
+
         command = "dccmsg"
         prefix = self.peeraddress
         target = None
